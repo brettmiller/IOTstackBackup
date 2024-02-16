@@ -79,7 +79,10 @@ if [ -e "$CONFIG_YML" ] ; then
    CLOUD_PREFIX=$(shyaml get-value backup.prefix  < "$CONFIG_YML")
    CLOUD_OPTIONS=$(shyaml -q get-value backup.options  < "$CONFIG_YML")
    LOCAL_RETAIN=$(shyaml get-value backup.retain  < "$CONFIG_YML")
-   LOCAL_RETAIN=$(shyaml get-value backup.retain_remote  < "$CONFIG_YML")
+   # if retain_remote is set get it's value
+   if grep -vE "^\s*#" $CONFIG_YML | grep --quiet retain_remote ; then
+   REMOTE_RETAIN=$(shyaml get-value backup.remote_retain  < "$CONFIG_YML")
+   fi
 else
    echo "Warning: Configuration file not found: $CONFIG_YML"
 fi
@@ -197,9 +200,9 @@ esac
 
 # cleanup: containers - "influx" not "influxdb" - then logs as a special case
 for C in "general" "influx" "influxdb2" "nextcloud" "mariadb" "postgres" ; do
-   ls -t1 *."$C-backup".* 2>/dev/null | tail -n +$LOCAL_RETAIN | xargs rm -f
+   ls -t1 *."$C-backup".* 2>/dev/null | tail -n +$((${LOCAL_RETAIN}+1)) | xargs rm -f
 done
-ls -t1 *."$LOGNAME".* 2>/dev/null | tail -n +$LOCAL_RETAIN | xargs rm -f
+ls -t1 *."$LOGNAME".* 2>/dev/null | tail -n +$((${LOCAL_RETAIN}+1)) | xargs rm -f
 if [[ "$CLOUD_METHOD" = "RCLONE_COPY" ]]; then
    rclone lsl "$CLOUD_PATH"
 fi
